@@ -14,9 +14,9 @@ NEX-GDDP-CMIP6.
 - Dépendances pipeline : `pipeline/requirements.txt`
 - JSON actuel : `docs/climat_france_tasmax.json`
 
-Attention : le JSON actuel est une fixture de test avec un seul point
-climatique, Santa-Maria-Poggio en 2035. Pour obtenir France métropolitaine +
-Corse et toutes les années 2030-2100, il faut lancer le pipeline complet.
+Le JSON actuel peut être une fixture de test ou le jeu complet selon le dernier
+commit récupéré. Vérifier `docs/climat_france_tasmax.json` : le jeu complet
+contient les années 2030 à 2100 tous les 5 ans et environ 1 261 points.
 
 ## Installation sur le nouveau PC
 
@@ -78,6 +78,10 @@ http://localhost:8000/
 La recherche de commune utilise `geo.api.gouv.fr`. Hors ligne, l'app reste
 consultable pour la dernière commune chargée si elle a déjà été mise en cache
 par le service worker.
+
+L'app propose une vue par année et une vue par fenêtre climatique. Les fenêtres
+sont calculées côté navigateur en moyennant les années disponibles du JSON, par
+exemple 2030-2050 = 2030, 2035, 2040, 2045 et 2050.
 
 ## Déploiement GitHub Pages
 

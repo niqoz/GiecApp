@@ -17,9 +17,12 @@ Le navigateur ne télécharge jamais de NetCDF. Le pipeline Python pré-calcule 
 JSON statique `docs/climat_france_tasmax.json`, ensuite mis en cache par le
 service worker.
 
-Le fichier JSON livré ici est une fixture minimale construite depuis le CSV déjà
-présent pour Santa-Maria-Poggio en 2035. Relancer le pipeline complet remplace
-cette fixture par le jeu France métropolitaine + Corse.
+L'application propose deux lectures :
+
+- **Année** : le maximum mensuel des `tasmax` journaliers pour une année simulée.
+- **Fenêtre** : la moyenne, mois par mois, des années disponibles dans la fenêtre
+  choisie. Comme le JSON est échantillonné tous les 5 ans, la fenêtre 2030-2050
+  moyenne les années 2030, 2035, 2040, 2045 et 2050.
 
 ## Générer le JSON complet
 

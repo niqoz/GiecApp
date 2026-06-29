@@ -141,13 +141,20 @@
   .location b{display:block;font-size:15px;line-height:1.25}
   .location span{display:block;margin-top:2px;color:var(--muted);font-size:12px;line-height:1.4}
   .controls{
-    display:flex;
+    display:grid;
+    grid-template-columns:1fr 1fr;
     gap:8px;
-    align-items:center;
+    align-items:end;
   }
-  .controls label{font-size:12px;font-weight:750;color:var(--muted)}
-  .controls select{
-    flex:1;
+  .control label{
+    display:block;
+    margin-bottom:4px;
+    font-size:11px;
+    font-weight:750;
+    color:var(--muted);
+  }
+  .control select{
+    width:100%;
     border:1px solid var(--line);
     border-radius:10px;
     padding:9px 10px;
@@ -333,7 +340,7 @@
     header{padding:22px 24px}
     h1{font-size:21px}
     .topline{
-      grid-template-columns:1fr 240px;
+      grid-template-columns:1fr 360px;
       align-items:center;
       padding:16px 20px;
     }
@@ -378,8 +385,17 @@
       </div>
     </div>
     <div class="controls">
-      <label for="yearSelect">Année</label>
-      <select id="yearSelect"></select>
+      <div class="control">
+        <label for="viewMode">Vue</label>
+        <select id="viewMode">
+          <option value="year">Année</option>
+          <option value="window">Fenêtre</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="periodSelect" id="periodLabel">Année</label>
+        <select id="periodSelect"></select>
+      </div>
     </div>
   </section>
 
@@ -413,6 +429,7 @@
         <ul>
           <li>Approximation par grille 0,25° environ 25 km.</li>
           <li>Une petite commune peut partager le même point climatique que ses voisines.</li>
+          <li>Les fenêtres affichent la moyenne des années disponibles dans le JSON, espacées de 5 ans.</li>
           <li>Un seul modèle dans le MVP ; ce n'est pas une moyenne multi-modèles.</li>
         </ul>
       </section>
@@ -436,6 +453,12 @@ const SCENARIOS = {
   ssp245: { label: "SSP2-4.5", color: "#e07a35" },
   ssp585: { label: "SSP5-8.5", color: "#c5406d" }
 };
+const CLIMATE_WINDOWS = [
+  { id: "2030-2050", label: "2030-2050", start: 2030, end: 2050 },
+  { id: "2055-2075", label: "2055-2075", start: 2055, end: 2075 },
+  { id: "2080-2100", label: "2080-2100", start: 2080, end: 2100 },
+  { id: "2030-2100", label: "2030-2100", start: 2030, end: 2100 }
+];
 const MAX_DISTANCE_KM = 80;
 const STORAGE_KEY = "climatCommuneSelection";
 
@@ -505,9 +528,40 @@ function availableYears(){
   return [...years].sort();
 }
 
-function populateYears(){
-  const select = $("yearSelect");
+function yearsInWindow(win){
+  return availableYears()
+    .map((year) => Number(year))
+    .filter((year) => year >= win.start && year <= win.end)
+    .sort((a, b) => a - b);
+}
+
+function availableWindows(){
+  return CLIMATE_WINDOWS
+    .map((win) => ({ ...win, years: yearsInWindow(win) }))
+    .filter((win) => win.years.length >= 2);
+}
+
+function populatePeriods(){
+  const mode = $("viewMode").value;
+  const select = $("periodSelect");
   clearChildren(select);
+  $("periodLabel").textContent = mode === "window" ? "Fenêtre" : "Année";
+
+  if(mode === "window"){
+    const windows = availableWindows();
+    for(const win of windows){
+      const option = document.createElement("option");
+      option.value = win.id;
+      option.textContent = `${win.label} (${win.years.length} années)`;
+      select.appendChild(option);
+    }
+    if(!windows.length){
+      $("viewMode").value = "year";
+      populatePeriods();
+    }
+    return;
+  }
+
   for(const year of availableYears()){
     const option = document.createElement("option");
     option.value = year;
@@ -565,9 +619,38 @@ function restoreSelection(){
   }
 }
 
-function scenarioValues(year){
+function currentPeriod(){
+  const mode = $("viewMode").value;
+  if(mode === "window"){
+    const win = availableWindows().find((item) => item.id === $("periodSelect").value);
+    if(win) return { kind: "window", id: win.id, label: win.label, years: win.years };
+  }
+  const year = Number($("periodSelect").value || availableYears()[0]);
+  return { kind: "year", id: String(year), label: String(year), years: [year] };
+}
+
+function scenarioValues(period){
   if(!selected) return {};
-  return selected.point.values?.[String(year)] || {};
+  if(period.kind === "year") return selected.point.values?.[String(period.years[0])] || {};
+
+  const result = {};
+  const scenarios = climate?.meta?.scenarios || Object.keys(SCENARIOS);
+  for(const scenario of scenarios){
+    const monthly = Array.from({ length: 12 }, () => []);
+    for(const year of period.years){
+      const values = selected.point.values?.[String(year)]?.[scenario];
+      if(!Array.isArray(values)) continue;
+      values.forEach((value, month) => {
+        if(Number.isFinite(value)) monthly[month].push(value);
+      });
+    }
+    if(monthly.every((values) => values.length > 0)){
+      result[scenario] = monthly.map((values) =>
+        values.reduce((sum, value) => sum + value, 0) / values.length
+      );
+    }
+  }
+  return result;
 }
 
 function renderEmptyChart(message){
@@ -577,7 +660,7 @@ function renderEmptyChart(message){
 }
 
 function renderChart(){
-  const year = $("yearSelect").value;
+  const period = currentPeriod();
   const svg = $("chart");
   clearChildren(svg);
   activeBar = null;
@@ -586,10 +669,10 @@ function renderChart(){
     renderEmptyChart("Sélectionnez une commune.");
     return;
   }
-  const valuesByScenario = scenarioValues(year);
+  const valuesByScenario = scenarioValues(period);
   const scenarios = (climate.meta.scenarios || Object.keys(SCENARIOS)).filter((s) => Array.isArray(valuesByScenario[s]));
   if(!scenarios.length){
-    renderEmptyChart("Pas de données pour cette année.");
+    renderEmptyChart("Pas de données pour cette période.");
     return;
   }
 
@@ -647,13 +730,16 @@ function renderChart(){
         "data-scenario": scenario,
         "data-value": value
       });
-      const title = appendSvg(rect, "title", {}, `${month} ${year} ${scenario}: ${fmtTemp(value)}`);
-      title.textContent = `${month} ${year} ${scenario}: ${fmtTemp(value)}`;
+      const title = appendSvg(rect, "title", {}, `${month} ${period.label} ${scenario}: ${fmtTemp(value)}`);
+      title.textContent = `${month} ${period.label} ${scenario}: ${fmtTemp(value)}`;
       rect.addEventListener("click", () => showDetail(monthIndex, scenario, value, rect));
     });
   });
 
-  $("chartTitle").textContent = selected.commune.nom + " · " + year;
+  $("chartTitle").textContent = selected.commune.nom + " · " + period.label;
+  $("dataTag").textContent = period.kind === "window"
+    ? `moyenne ${period.years.length} années`
+    : points.length + " point" + (points.length > 1 ? "s" : "");
 }
 
 function showDetail(monthIndex, scenario, value, rect){
@@ -661,8 +747,8 @@ function showDetail(monthIndex, scenario, value, rect){
   activeBar = rect;
   activeBar.classList.add("active");
 
-  const year = $("yearSelect").value;
-  const values = scenarioValues(year);
+  const period = currentPeriod();
+  const values = scenarioValues(period);
   const panel = $("detailPanel");
   panel.className = "";
   clearChildren(panel);
@@ -670,10 +756,10 @@ function showDetail(monthIndex, scenario, value, rect){
   const grid = document.createElement("div");
   grid.className = "detail-grid";
   const metrics = [
-    ["Mois", MONTHS[monthIndex] + " " + year],
+    ["Mois", MONTHS[monthIndex]],
+    ["Période", period.label],
     ["Scénario", SCENARIOS[scenario]?.label || scenario],
-    ["Valeur", fmtTemp(value)],
-    ["Point", selected.point.lat.toFixed(3) + ", " + selected.point.lon.toFixed(3)]
+    [period.kind === "window" ? "Moyenne" : "Valeur", fmtTemp(value)]
   ];
   for(const [key, val] of metrics){
     const box = document.createElement("div");
@@ -686,6 +772,15 @@ function showDetail(monthIndex, scenario, value, rect){
     box.appendChild(v);
     grid.appendChild(box);
   }
+  const pointBox = document.createElement("div");
+  pointBox.className = "metric";
+  const pointKey = document.createElement("span");
+  pointKey.textContent = "Point";
+  const pointValue = document.createElement("b");
+  pointValue.textContent = selected.point.lat.toFixed(3) + ", " + selected.point.lon.toFixed(3);
+  pointBox.appendChild(pointKey);
+  pointBox.appendChild(pointValue);
+  grid.appendChild(pointBox);
   panel.appendChild(grid);
 
   const deltas = document.createElement("div");
@@ -695,6 +790,9 @@ function showDetail(monthIndex, scenario, value, rect){
     if(other === scenario || !Array.isArray(values[other])) continue;
     const delta = value - values[other][monthIndex];
     lines.push(`${fmtDelta(delta)} vs ${SCENARIOS[other]?.label || other}`);
+  }
+  if(period.kind === "window"){
+    lines.push(`Moyenne des années disponibles : ${period.years.join(", ")}`);
   }
   lines.push(`Distance commune-point : ${selected.distance.toFixed(1).replace(".", ",")} km`);
   lines.push(`${climate.meta.source}; ${climate.meta.model}, ${climate.meta.member}`);
@@ -805,7 +903,7 @@ async function initData(){
   climate = await response.json();
   points = climate.points || [];
   if(!points.length) throw new Error("JSON climatique vide");
-  populateYears();
+  populatePeriods();
   updateLegend();
   setMeta();
 
@@ -857,7 +955,11 @@ function initPwa(){
   }
 }
 
-$("yearSelect").addEventListener("change", renderSelection);
+$("viewMode").addEventListener("change", () => {
+  populatePeriods();
+  renderSelection();
+});
+$("periodSelect").addEventListener("change", renderSelection);
 initSearch();
 initPwa();
 initData().catch((err) => {
