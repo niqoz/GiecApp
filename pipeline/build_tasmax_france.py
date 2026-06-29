@@ -191,6 +191,22 @@ def select_grid_points(ds, np) -> list[dict]:
     return points
 
 
+def contiguous_runs(indices: list[int]) -> list[tuple[int, int]]:
+    if not indices:
+        return []
+
+    runs = []
+    start = prev = indices[0]
+    for idx in indices[1:]:
+        if idx == prev + 1:
+            prev = idx
+            continue
+        runs.append((start, prev))
+        start = prev = idx
+    runs.append((start, prev))
+    return runs
+
+
 def month_masks(ds, np, num2date) -> list:
     time_var = ds.variables["time"]
     dates = num2date(
@@ -214,30 +230,57 @@ def extract_file(path: Path, grid_points: list[dict] | None) -> tuple[list[dict]
 
         var = ds.variables["tasmax"]
         masks = month_masks(ds, np, num2date)
-        by_lat: dict[int, list[dict]] = defaultdict(list)
-        for point in grid_points:
-            by_lat[point["lat_idx"]].append(point)
+        lat_indices = [point["lat_idx"] for point in grid_points]
+        lat_start = min(lat_indices)
+        lat_end = max(lat_indices)
+        lon_runs = contiguous_runs(sorted({point["lon_idx"] for point in grid_points}))
 
         extracted: dict[str, list[float]] = {}
-        for lat_idx, lat_points in by_lat.items():
-            lat_points = sorted(lat_points, key=lambda p: p["lon_idx"])
-            lon_indices = [p["lon_idx"] for p in lat_points]
-            block = np.ma.filled(var[:, int(lat_idx), lon_indices], np.nan).astype(float) - 273.15
-            if block.ndim == 1:
-                block = block.reshape((-1, 1))
-            for col, point in enumerate(lat_points):
-                series = block[:, col]
+        valid_grid_points: list[dict] = []
+        skipped_points: list[str] = []
+        for lon_start, lon_end in lon_runs:
+            run_points = [
+                point
+                for point in grid_points
+                if lon_start <= point["lon_idx"] <= lon_end
+            ]
+            block = np.ma.filled(
+                var[:, lat_start : lat_end + 1, lon_start : lon_end + 1],
+                np.nan,
+            ).astype(float) - 273.15
+            for point in run_points:
+                lat_offset = point["lat_idx"] - lat_start
+                lon_offset = point["lon_idx"] - lon_start
+                series = block[:, lat_offset, lon_offset]
                 values = []
+                valid = True
                 for mask in masks:
                     month_values = series[mask]
-                    val = float(np.nanmax(month_values))
+                    finite_month_values = month_values[np.isfinite(month_values)]
+                    if finite_month_values.size == 0:
+                        valid = False
+                        break
+                    val = float(np.max(finite_month_values))
                     if not math.isfinite(val):
-                        raise RuntimeError(f"Non-finite monthly value for {point['id']} in {path}")
+                        valid = False
+                        break
                     if val < -80.0 or val > 80.0:
                         raise RuntimeError(f"Implausible Celsius value {val:.2f} for {point['id']} in {path}")
                     values.append(round(val, 2))
+                if not valid:
+                    skipped_points.append(point["id"])
+                    continue
+                valid_grid_points.append(point)
                 extracted[point["id"]] = values
-    return grid_points, extracted
+
+        valid_grid_points.sort(key=lambda p: (p["lat"], p["lon"]))
+        if skipped_points:
+            preview = ", ".join(skipped_points[:5])
+            suffix = "" if len(skipped_points) <= 5 else f", +{len(skipped_points) - 5} more"
+            print(f"skipped {len(skipped_points)} masked grid point(s) in {path}: {preview}{suffix}", file=sys.stderr)
+        if not valid_grid_points:
+            raise RuntimeError(f"No finite grid points found in {path}")
+    return valid_grid_points, extracted
 
 
 def write_json(payload: dict, output: Path, pretty: bool) -> None:
@@ -260,6 +303,8 @@ def build_from_netcdf(args: argparse.Namespace) -> dict:
         print(f"{year} {scenario}: {path}", file=sys.stderr)
         ensure_file(url, path, allow_download=not args.no_download)
         grid_points, values = extract_file(path, grid_points)
+        if args.delete_cache_after_read:
+            path.unlink(missing_ok=True)
         file_count += 1
         for point in grid_points:
             item = points_by_id.setdefault(
@@ -361,6 +406,11 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("docs/climat_france_tasmax.json"))
     parser.add_argument("--no-download", action="store_true", help="Fail if an expected NetCDF is absent from --data-dir")
     parser.add_argument("--check-files", action="store_true", help="Only list expected cached files and report missing files")
+    parser.add_argument(
+        "--delete-cache-after-read",
+        action="store_true",
+        help="Delete each cached NetCDF after extraction to reduce disk usage",
+    )
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON instead of compact output")
     parser.add_argument("--sample-from-csv", type=Path, help="Build a one-point fixture from an existing monthly CSV")
     parser.add_argument("--sample-year", type=int, default=2035)
