@@ -1,0 +1,6 @@
+data/raw/
+data/out/
+*.nc
+*.nc.part
+__pycache__/
+.venv/

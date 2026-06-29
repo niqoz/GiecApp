@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "source": "NASA NEX-GDDP-CMIP6 v2.0",
+    "source_url": "https://www.nasa.gov/nex/gddp-cmip6/",
+    "model": "ACCESS-CM2",
+    "member": "r1i1p1f1",
+    "variable": "tasmax",
+    "scenarios": [
+      "ssp126",
+      "ssp245",
+      "ssp585"
+    ],
+    "years": [
+      2035
+    ],
+    "unit": "degC",
+    "statistic": "monthly maximum of daily tasmax",
+    "grid": "0.25 degree NEX-GDDP-CMIP6 grid, nearest point to commune centroid",
+    "coverage": "sample fixture from outputs/santa_maria_poggio_2035_tasmax_monthly_max.csv",
+    "coverage_note": "Fixture un point : relancer le pipeline complet pour France metropolitaine + Corse.",
+    "sample_commune": "Santa-Maria-Poggio",
+    "generated_at": "2026-06-29T19:33:18+00:00",
+    "points": 1
+  },
+  "points": [
+    {
+      "id": "g_42p375_9p625",
+      "lat": 42.375,
+      "lon": 9.625,
+      "values": {
+        "2035": {
+          "ssp126": [
+            16.07,
+            14.67,
+            18.03,
+            23.93,
+            26.56,
+            32.37,
+            34.75,
+            34.37,
+            31.05,
+            27.21,
+            23.45,
+            17.92
+          ],
+          "ssp245": [
+            16.32,
+            16.45,
+            19.06,
+            20.65,
+            24.74,
+            30.54,
+            36.61,
+            32.87,
+            30.48,
+            29.8,
+            21.76,
+            18.71
+          ],
+          "ssp585": [
+            15.84,
+            16.89,
+            19.03,
+            22.1,
+            26.78,
+            32.09,
+            35.0,
+            33.24,
+            29.49,
+            24.03,
+            20.37,
+            15.8
+          ]
+        }
+      }
+    }
+  ]
+}

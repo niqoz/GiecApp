@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climat Commune — tasmax CMIP6</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#d64933">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Climat Commune">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#f3f0eb;
+    --panel:#ffffff;
+    --ink:#241f1f;
+    --muted:#706a68;
+    --line:#e4ddd6;
+    --warm:#d64933;
+    --warm2:#f6a35d;
+    --ok:#1d7660;
+    --warn:#9b5c00;
+    --ssp126:#3f88c5;
+    --ssp245:#e07a35;
+    --ssp585:#c5406d;
+  }
+  *{box-sizing:border-box}
+  html{min-height:100%;background:var(--bg)}
+  body{
+    min-height:100%;
+    margin:0;
+    padding:14px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      linear-gradient(180deg,rgba(214,73,51,.08),rgba(246,163,93,0) 260px),
+      var(--bg);
+  }
+  button,input,select{font:inherit}
+  .app{
+    width:100%;
+    max-width:1120px;
+    margin:0 auto;
+    overflow:hidden;
+    border:1px solid rgba(36,31,31,.08);
+    border-radius:22px;
+    background:var(--panel);
+    box-shadow:0 18px 42px rgba(82,52,37,.14);
+  }
+  header{
+    padding:18px;
+    color:#fff;
+    background:linear-gradient(135deg,#d64933,#f6a35d);
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{
+    display:grid;
+    place-items:center;
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    background:rgba(255,255,255,.18);
+    font-size:22px;
+    font-weight:800;
+  }
+  h1{margin:0;font-size:18px;line-height:1.2;letter-spacing:0}
+  .subtitle{margin:3px 0 0;font-size:12.5px;line-height:1.45;opacity:.9}
+  .search{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    margin-top:16px;
+  }
+  .search input{
+    min-width:0;
+    border:0;
+    border-radius:12px;
+    padding:12px 13px;
+    background:rgba(255,255,255,.94);
+    color:var(--ink);
+    font-weight:650;
+  }
+  .search button,.install{
+    border:0;
+    border-radius:12px;
+    padding:12px 13px;
+    color:#fff;
+    background:rgba(36,31,31,.26);
+    font-weight:750;
+    cursor:pointer;
+  }
+  .install{
+    width:100%;
+    margin-top:10px;
+    color:var(--warm);
+    background:#fff;
+  }
+  .results{
+    display:grid;
+    gap:7px;
+    margin-top:9px;
+  }
+  .result{
+    width:100%;
+    border:1px solid rgba(255,255,255,.24);
+    border-radius:12px;
+    padding:9px 11px;
+    color:#fff;
+    background:rgba(36,31,31,.18);
+    text-align:left;
+    cursor:pointer;
+  }
+  .result b{display:block;font-size:13.5px}
+  .result span{display:block;margin-top:2px;font-size:11.5px;opacity:.82}
+  .topline{
+    display:grid;
+    gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    background:#fffaf6;
+  }
+  .location{
+    display:flex;
+    gap:9px;
+    align-items:flex-start;
+    min-width:0;
+  }
+  .pin{
+    display:grid;
+    place-items:center;
+    width:32px;
+    height:32px;
+    flex:0 0 auto;
+    border-radius:10px;
+    color:var(--warm);
+    background:#ffe8da;
+    font-weight:900;
+  }
+  .location b{display:block;font-size:15px;line-height:1.25}
+  .location span{display:block;margin-top:2px;color:var(--muted);font-size:12px;line-height:1.4}
+  .controls{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .controls label{font-size:12px;font-weight:750;color:var(--muted)}
+  .controls select{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:9px 10px;
+    background:#fff;
+    color:var(--ink);
+    font-weight:750;
+  }
+  .content{
+    display:grid;
+    gap:0;
+  }
+  .main{
+    padding:14px;
+  }
+  .chart-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .chart-head h2{margin:0;font-size:15px;line-height:1.2}
+  .tag{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    border-radius:999px;
+    padding:4px 8px;
+    background:#f2f4ef;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:750;
+    white-space:nowrap;
+  }
+  .chart-box{
+    width:100%;
+    min-height:320px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 6px 4px;
+    background:#fff;
+  }
+  svg{display:block;width:100%;height:auto}
+  .grid{stroke:#e8e1da;stroke-width:1}
+  .axis{stroke:#bdb4ad;stroke-width:1.2}
+  .tick{fill:#766f6b;font-size:11px}
+  .month{fill:#766f6b;font-size:11px;font-weight:650}
+  .bar{cursor:pointer;transition:opacity .15s,stroke-width .15s}
+  .bar:hover{opacity:.78}
+  .bar.active{stroke:#211b1a;stroke-width:2.3}
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 14px;
+    justify-content:center;
+    padding:9px 2px 0;
+    color:var(--muted);
+    font-size:11px;
+  }
+  .legend i{
+    display:inline-block;
+    width:12px;
+    height:12px;
+    margin-right:5px;
+    border-radius:3px;
+    vertical-align:-2px;
+  }
+  .side{
+    border-top:1px solid var(--line);
+    background:#fbfaf8;
+  }
+  .detail,.meta,.limits{
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .detail h2,.meta h2,.limits h2{
+    margin:0 0 10px;
+    font-size:13px;
+    line-height:1.2;
+  }
+  .detail-empty{
+    color:var(--muted);
+    font-size:12.5px;
+    line-height:1.5;
+  }
+  .detail-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .metric{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px;
+    background:#fff;
+  }
+  .metric span{
+    display:block;
+    color:var(--muted);
+    font-size:10.5px;
+    font-weight:700;
+  }
+  .metric b{
+    display:block;
+    margin-top:3px;
+    font-size:17px;
+    line-height:1.2;
+  }
+  .deltas{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.55;
+  }
+  .row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:6px 0;
+    border-bottom:1px dashed var(--line);
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.4;
+  }
+  .row:last-child{border-bottom:0}
+  .row b{
+    color:var(--ink);
+    text-align:right;
+    font-weight:750;
+  }
+  .limits{
+    color:#704916;
+    background:#fff8ec;
+    font-size:12px;
+    line-height:1.55;
+  }
+  .limits ul{
+    margin:0;
+    padding-left:18px;
+  }
+  footer{
+    padding:11px 16px 16px;
+    color:#9a928e;
+    font-size:10.5px;
+    line-height:1.45;
+    text-align:center;
+    background:#fbfaf8;
+  }
+  .status{
+    margin-top:8px;
+    color:rgba(255,255,255,.9);
+    font-size:12px;
+    line-height:1.4;
+  }
+  .ioshint{
+    position:fixed;
+    left:50%;
+    bottom:12px;
+    z-index:50;
+    width:calc(100% - 24px);
+    max-width:430px;
+    transform:translateX(-50%);
+    border-radius:14px;
+    padding:12px 14px;
+    color:#fff;
+    background:#241f1f;
+    box-shadow:0 10px 28px rgba(0,0,0,.28);
+    font-size:13px;
+    line-height:1.45;
+  }
+  .ioshint[hidden],.install[hidden]{display:none}
+  .ioshint button{
+    float:right;
+    margin-left:8px;
+    border:0;
+    border-radius:8px;
+    padding:4px 8px;
+    color:#fff;
+    background:rgba(255,255,255,.16);
+  }
+  @media (min-width:768px){
+    body{padding:24px}
+    header{padding:22px 24px}
+    h1{font-size:21px}
+    .topline{
+      grid-template-columns:1fr 240px;
+      align-items:center;
+      padding:16px 20px;
+    }
+    .content{
+      grid-template-columns:minmax(0,1fr) 330px;
+      align-items:stretch;
+    }
+    .main{padding:18px 20px 20px}
+    .side{
+      border-top:0;
+      border-left:1px solid var(--line);
+    }
+    .chart-box{min-height:390px;padding:12px 10px 6px}
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="brand">
+      <div class="mark">°C</div>
+      <div>
+        <h1>Climat Commune — tasmax CMIP6</h1>
+        <p class="subtitle">Maximum journalier de température maximale, par mois et par scénario.</p>
+      </div>
+    </div>
+    <form class="search" id="searchForm">
+      <input id="searchInput" type="search" autocomplete="off" placeholder="Nom de commune" aria-label="Nom de commune">
+      <button type="submit" title="Rechercher">⌕</button>
+    </form>
+    <div class="results" id="results"></div>
+    <button id="installBtn" class="install" hidden>Installer l'application</button>
+    <div class="status" id="status">Chargement des données climatiques…</div>
+  </header>
+
+  <section class="topline">
+    <div class="location">
+      <div class="pin">⌖</div>
+      <div>
+        <b id="selectedName">Aucune commune sélectionnée</b>
+        <span id="selectedSub">La recherche de commune nécessite le réseau.</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label for="yearSelect">Année</label>
+      <select id="yearSelect"></select>
+    </div>
+  </section>
+
+  <div class="content">
+    <section class="main">
+      <div class="chart-head">
+        <h2 id="chartTitle">Histogramme mensuel</h2>
+        <span class="tag" id="dataTag">CMIP6</span>
+      </div>
+      <div class="chart-box">
+        <svg id="chart" viewBox="0 0 720 380" role="img" aria-labelledby="chartTitle"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="detail">
+        <h2>Détail</h2>
+        <div id="detailPanel" class="detail-empty">Aucune barre sélectionnée.</div>
+      </section>
+      <section class="meta">
+        <h2>Point utilisé</h2>
+        <div class="row"><span>Coordonnées grille</span><b id="gridCoord">—</b></div>
+        <div class="row"><span>Distance commune</span><b id="gridDist">—</b></div>
+        <div class="row"><span>Source</span><b id="sourceLine">—</b></div>
+        <div class="row"><span>Modèle</span><b id="modelLine">—</b></div>
+        <div class="row"><span>Variable</span><b id="variableLine">—</b></div>
+      </section>
+      <section class="limits">
+        <h2>Limites</h2>
+        <ul>
+          <li>Approximation par grille 0,25° environ 25 km.</li>
+          <li>Une petite commune peut partager le même point climatique que ses voisines.</li>
+          <li>Un seul modèle dans le MVP ; ce n'est pas une moyenne multi-modèles.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <footer id="footerSource">
+    NASA NEX-GDDP-CMIP6 v2.0 · ACCESS-CM2 · r1i1p1f1 · tasmax
+  </footer>
+</main>
+
+<div id="iosHint" class="ioshint" hidden>
+  <button id="iosHintClose" aria-label="Fermer">×</button>
+  Pour installer sur iPhone : Partager, puis « Sur l'écran d'accueil » dans Safari.
+</div>
+
+<script>
+const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
+const SCENARIOS = {
+  ssp126: { label: "SSP1-2.6", color: "#3f88c5" },
+  ssp245: { label: "SSP2-4.5", color: "#e07a35" },
+  ssp585: { label: "SSP5-8.5", color: "#c5406d" }
+};
+const MAX_DISTANCE_KM = 80;
+const STORAGE_KEY = "climatCommuneSelection";
+
+let climate = null;
+let points = [];
+let selected = null;
+let activeBar = null;
+
+const $ = (id) => document.getElementById(id);
+const svgNS = "http://www.w3.org/2000/svg";
+
+function setStatus(text){
+  $("status").textContent = text;
+}
+
+function fmtTemp(value){
+  return value == null || Number.isNaN(value) ? "—" : value.toFixed(1).replace(".", ",") + " °C";
+}
+
+function fmtDelta(value){
+  const rounded = Math.round(value * 10) / 10;
+  const sign = rounded > 0 ? "+" : "";
+  return sign + rounded.toFixed(1).replace(".", ",") + " °C";
+}
+
+function haversine(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * r;
+  const dLon = (lon2 - lon1) * r;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function nearestPoint(lat, lon){
+  let best = null;
+  let distance = Infinity;
+  for(const point of points){
+    const d = haversine(lat, lon, point.lat, point.lon);
+    if(d < distance){
+      best = point;
+      distance = d;
+    }
+  }
+  return best ? { point: best, distance } : null;
+}
+
+function clearChildren(node){
+  while(node.firstChild) node.removeChild(node.firstChild);
+}
+
+function appendSvg(parent, tag, attrs, text){
+  const el = document.createElementNS(svgNS, tag);
+  for(const [key, value] of Object.entries(attrs || {})) el.setAttribute(key, value);
+  if(text != null) el.textContent = text;
+  parent.appendChild(el);
+  return el;
+}
+
+function availableYears(){
+  if(climate && climate.meta && Array.isArray(climate.meta.years)) return climate.meta.years.map(String);
+  const years = new Set();
+  for(const point of points){
+    Object.keys(point.values || {}).forEach((year) => years.add(year));
+  }
+  return [...years].sort();
+}
+
+function populateYears(){
+  const select = $("yearSelect");
+  clearChildren(select);
+  for(const year of availableYears()){
+    const option = document.createElement("option");
+    option.value = year;
+    option.textContent = year;
+    select.appendChild(option);
+  }
+}
+
+function updateLegend(){
+  const legend = $("legend");
+  clearChildren(legend);
+  const scenarios = climate?.meta?.scenarios || Object.keys(SCENARIOS);
+  for(const scenario of scenarios){
+    const item = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.style.background = SCENARIOS[scenario]?.color || "#777";
+    item.appendChild(swatch);
+    item.appendChild(document.createTextNode(SCENARIOS[scenario]?.label || scenario));
+    legend.appendChild(item);
+  }
+}
+
+function setMeta(){
+  const meta = climate?.meta || {};
+  $("sourceLine").textContent = meta.source || "—";
+  $("modelLine").textContent = [meta.model, meta.member].filter(Boolean).join(" · ") || "—";
+  $("variableLine").textContent = meta.variable ? meta.variable + " · " + (meta.unit || "degC") : "—";
+  $("footerSource").textContent =
+    [meta.source, meta.model, meta.member, meta.variable].filter(Boolean).join(" · ") || "NASA NEX-GDDP-CMIP6";
+  $("dataTag").textContent = points.length + " point" + (points.length > 1 ? "s" : "");
+}
+
+function saveSelection(){
+  if(!selected) return;
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      commune: selected.commune,
+      pointId: selected.point.id,
+      distance: selected.distance
+    }));
+  }catch(err){}
+}
+
+function restoreSelection(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const saved = JSON.parse(raw);
+    const point = points.find((p) => p.id === saved.pointId);
+    if(!point || !saved.commune) return false;
+    selected = { commune: saved.commune, point, distance: saved.distance };
+    return true;
+  }catch(err){
+    return false;
+  }
+}
+
+function scenarioValues(year){
+  if(!selected) return {};
+  return selected.point.values?.[String(year)] || {};
+}
+
+function renderEmptyChart(message){
+  const svg = $("chart");
+  clearChildren(svg);
+  appendSvg(svg, "text", { x: 360, y: 190, "text-anchor": "middle", fill: "#706a68", "font-size": "14" }, message);
+}
+
+function renderChart(){
+  const year = $("yearSelect").value;
+  const svg = $("chart");
+  clearChildren(svg);
+  activeBar = null;
+
+  if(!selected){
+    renderEmptyChart("Sélectionnez une commune.");
+    return;
+  }
+  const valuesByScenario = scenarioValues(year);
+  const scenarios = (climate.meta.scenarios || Object.keys(SCENARIOS)).filter((s) => Array.isArray(valuesByScenario[s]));
+  if(!scenarios.length){
+    renderEmptyChart("Pas de données pour cette année.");
+    return;
+  }
+
+  const allValues = scenarios.flatMap((scenario) => valuesByScenario[scenario]);
+  const minValue = Math.min(...allValues, 0);
+  const maxValue = Math.max(...allValues, 1);
+  const yMin = minValue < 0 ? Math.floor((minValue - 2) / 5) * 5 : 0;
+  const yMax = Math.ceil((maxValue + 2) / 5) * 5;
+  const left = 48;
+  const right = 18;
+  const top = 24;
+  const bottom = 52;
+  const width = 720 - left - right;
+  const height = 380 - top - bottom;
+  const yScale = (value) => top + (yMax - value) / (yMax - yMin) * height;
+  const xScale = (month) => left + month * width / 12;
+  const baseline = yScale(0);
+  const yStep = Math.max(5, Math.ceil((yMax - yMin) / 5 / 5) * 5);
+
+  for(let y = yMin; y <= yMax + 0.001; y += yStep){
+    const py = yScale(y);
+    appendSvg(svg, "line", { class: "grid", x1: left, y1: py, x2: 720 - right, y2: py });
+    appendSvg(svg, "text", { class: "tick", x: left - 8, y: py + 4, "text-anchor": "end" }, String(y));
+  }
+  appendSvg(svg, "line", { class: "axis", x1: left, y1: baseline, x2: 720 - right, y2: baseline });
+  appendSvg(svg, "line", { class: "axis", x1: left, y1: top, x2: left, y2: top + height });
+  appendSvg(svg, "text", { class: "tick", x: 8, y: 18 }, "°C");
+
+  const groupWidth = width / 12;
+  const gap = Math.max(2, 7 - scenarios.length);
+  const barWidth = Math.max(6, (groupWidth - 12 - gap * (scenarios.length - 1)) / scenarios.length);
+
+  MONTHS.forEach((month, monthIndex) => {
+    appendSvg(svg, "text", {
+      class: "month",
+      x: xScale(monthIndex) + groupWidth / 2,
+      y: 360,
+      "text-anchor": "middle"
+    }, month);
+
+    scenarios.forEach((scenario, scenarioIndex) => {
+      const value = valuesByScenario[scenario][monthIndex];
+      const x = xScale(monthIndex) + 6 + scenarioIndex * (barWidth + gap);
+      const y = yScale(Math.max(value, 0));
+      const h = Math.abs(yScale(value) - baseline);
+      const rect = appendSvg(svg, "rect", {
+        class: "bar",
+        x: x,
+        y: value >= 0 ? y : baseline,
+        width: barWidth,
+        height: Math.max(1, h),
+        rx: 3,
+        fill: SCENARIOS[scenario]?.color || "#777",
+        "data-month": monthIndex,
+        "data-scenario": scenario,
+        "data-value": value
+      });
+      const title = appendSvg(rect, "title", {}, `${month} ${year} ${scenario}: ${fmtTemp(value)}`);
+      title.textContent = `${month} ${year} ${scenario}: ${fmtTemp(value)}`;
+      rect.addEventListener("click", () => showDetail(monthIndex, scenario, value, rect));
+    });
+  });
+
+  $("chartTitle").textContent = selected.commune.nom + " · " + year;
+}
+
+function showDetail(monthIndex, scenario, value, rect){
+  if(activeBar) activeBar.classList.remove("active");
+  activeBar = rect;
+  activeBar.classList.add("active");
+
+  const year = $("yearSelect").value;
+  const values = scenarioValues(year);
+  const panel = $("detailPanel");
+  panel.className = "";
+  clearChildren(panel);
+
+  const grid = document.createElement("div");
+  grid.className = "detail-grid";
+  const metrics = [
+    ["Mois", MONTHS[monthIndex] + " " + year],
+    ["Scénario", SCENARIOS[scenario]?.label || scenario],
+    ["Valeur", fmtTemp(value)],
+    ["Point", selected.point.lat.toFixed(3) + ", " + selected.point.lon.toFixed(3)]
+  ];
+  for(const [key, val] of metrics){
+    const box = document.createElement("div");
+    box.className = "metric";
+    const k = document.createElement("span");
+    k.textContent = key;
+    const v = document.createElement("b");
+    v.textContent = val;
+    box.appendChild(k);
+    box.appendChild(v);
+    grid.appendChild(box);
+  }
+  panel.appendChild(grid);
+
+  const deltas = document.createElement("div");
+  deltas.className = "deltas";
+  const lines = [];
+  for(const other of Object.keys(values)){
+    if(other === scenario || !Array.isArray(values[other])) continue;
+    const delta = value - values[other][monthIndex];
+    lines.push(`${fmtDelta(delta)} vs ${SCENARIOS[other]?.label || other}`);
+  }
+  lines.push(`Distance commune-point : ${selected.distance.toFixed(1).replace(".", ",")} km`);
+  lines.push(`${climate.meta.source}; ${climate.meta.model}, ${climate.meta.member}`);
+  deltas.textContent = lines.join(" · ");
+  panel.appendChild(deltas);
+}
+
+function renderSelection(){
+  if(!selected){
+    $("selectedName").textContent = "Aucune commune sélectionnée";
+    $("selectedSub").textContent = "La recherche de commune nécessite le réseau.";
+    $("gridCoord").textContent = "—";
+    $("gridDist").textContent = "—";
+    renderChart();
+    return;
+  }
+
+  const dep = selected.commune.departement?.nom || selected.commune.departement || "";
+  $("selectedName").textContent = selected.commune.nom || "Commune";
+  $("selectedSub").textContent =
+    (dep ? dep + " · " : "") +
+    "point CMIP6 le plus proche à " + selected.distance.toFixed(1).replace(".", ",") + " km";
+  $("gridCoord").textContent = selected.point.lat.toFixed(3) + ", " + selected.point.lon.toFixed(3);
+  $("gridDist").textContent = selected.distance.toFixed(1).replace(".", ",") + " km";
+  $("detailPanel").className = "detail-empty";
+  $("detailPanel").textContent = "Aucune barre sélectionnée.";
+  renderChart();
+}
+
+function selectCommune(commune){
+  const coords = commune.centre?.coordinates;
+  if(!coords || coords.length < 2){
+    setStatus("Coordonnées de commune indisponibles.");
+    return;
+  }
+  const lon = Number(coords[0]);
+  const lat = Number(coords[1]);
+  const nearest = nearestPoint(lat, lon);
+  if(!nearest || nearest.distance > MAX_DISTANCE_KM){
+    const km = nearest ? nearest.distance.toFixed(0) : "—";
+    setStatus(`Aucun point climatique proche dans le JSON actuel (${km} km).`);
+    return;
+  }
+  selected = { commune, point: nearest.point, distance: nearest.distance };
+  saveSelection();
+  clearChildren($("results"));
+  setStatus("Commune sélectionnée.");
+  renderSelection();
+}
+
+function renderResults(communes){
+  const box = $("results");
+  clearChildren(box);
+  if(!communes.length){
+    setStatus("Aucune commune trouvée.");
+    return;
+  }
+  for(const commune of communes){
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "result";
+    const name = document.createElement("b");
+    name.textContent = commune.nom;
+    const dep = document.createElement("span");
+    dep.textContent = commune.departement?.nom || commune.code || "";
+    button.appendChild(name);
+    button.appendChild(dep);
+    button.addEventListener("click", () => selectCommune(commune));
+    box.appendChild(button);
+  }
+}
+
+async function searchCommunes(query){
+  if(!navigator.onLine){
+    setStatus("Recherche indisponible hors-ligne.");
+    return;
+  }
+  const params = new URLSearchParams({
+    nom: query,
+    fields: "nom,code,centre,departement",
+    boost: "population",
+    limit: "8",
+    format: "json",
+    geometry: "centre"
+  });
+  setStatus("Recherche en cours…");
+  const response = await fetch("https://geo.api.gouv.fr/communes?" + params.toString());
+  if(!response.ok) throw new Error("geo.api.gouv.fr " + response.status);
+  renderResults(await response.json());
+  setStatus("Sélectionnez une commune.");
+}
+
+function initSearch(){
+  $("searchForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const query = $("searchInput").value.trim();
+    if(query.length < 2){
+      setStatus("Saisissez au moins deux caractères.");
+      return;
+    }
+    searchCommunes(query).catch((err) => setStatus("Erreur de recherche : " + err.message));
+  });
+}
+
+async function initData(){
+  const response = await fetch("./climat_france_tasmax.json");
+  if(!response.ok) throw new Error("HTTP " + response.status);
+  climate = await response.json();
+  points = climate.points || [];
+  if(!points.length) throw new Error("JSON climatique vide");
+  populateYears();
+  updateLegend();
+  setMeta();
+
+  const restored = restoreSelection();
+  if(!restored && points.length === 1){
+    selected = {
+      commune: { nom: climate.meta.sample_commune || "Point climatique", departement: "échantillon" },
+      point: points[0],
+      distance: 0
+    };
+  }
+  if(climate.meta.coverage_note) setStatus(climate.meta.coverage_note);
+  else setStatus("Données climatiques chargées.");
+  renderSelection();
+}
+
+function initPwa(){
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+
+  let deferredPrompt = null;
+  const installBtn = $("installBtn");
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener("click", async () => {
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.hidden = true;
+  });
+
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) && "standalone" in navigator;
+  const installed = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  const dismissed = localStorage.getItem("iosHintDismissed") === "1";
+  if(isIOS && !installed && !dismissed){
+    const hint = $("iosHint");
+    hint.hidden = false;
+    $("iosHintClose").addEventListener("click", () => {
+      hint.hidden = true;
+      try{ localStorage.setItem("iosHintDismissed", "1"); }catch(err){}
+    });
+  }
+}
+
+$("yearSelect").addEventListener("change", renderSelection);
+initSearch();
+initPwa();
+initData().catch((err) => {
+  setStatus("Erreur de chargement des données : " + err.message);
+  renderEmptyChart("Données climatiques indisponibles.");
+});
+</script>
+</body>
+</html>
