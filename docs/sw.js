@@ -1,7 +1,7 @@
 /* Service worker — Climat Commune.
    Cache l'app shell et le JSON climatique. Strategie reseau d'abord, cache en
    repli pour garder la derniere version disponible hors-ligne. */
-const CACHE = "climat-commune-tasmax-v4";
+const CACHE = "climat-commune-tasmax-v5";
 const ASSETS = [
   "./",
   "./index.html",

@@ -162,6 +162,29 @@
     color:var(--ink);
     font-weight:750;
   }
+  .year-slider{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:4px 2px;
+  }
+  .year-slider input[type=range]{
+    flex:1;
+    min-width:0;
+    height:24px;
+    accent-color:var(--warm);
+    cursor:pointer;
+  }
+  .year-slider output{
+    flex:0 0 auto;
+    min-width:46px;
+    font-size:16px;
+    font-weight:800;
+    color:var(--warm);
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .year-slider[hidden]{display:none}
   .content{
     display:grid;
     gap:0;
@@ -394,7 +417,11 @@
       </div>
       <div class="control">
         <label for="periodSelect" id="periodLabel">Année</label>
-        <select id="periodSelect"></select>
+        <select id="periodSelect" hidden></select>
+        <div class="year-slider" id="yearSlider">
+          <input type="range" id="yearRange" min="0" max="0" step="1" value="0" aria-label="Année">
+          <output id="yearValue" for="yearRange"></output>
+        </div>
       </div>
     </div>
   </section>
@@ -539,13 +566,20 @@ function availableWindows(){
     .filter((win) => win.years.length >= 2);
 }
 
+function updateYearOutput(){
+  const years = availableYears();
+  const idx = Math.min(Number($("yearRange").value) || 0, years.length - 1);
+  $("yearValue").textContent = years[idx] || "";
+}
+
 function populatePeriods(){
   const mode = $("viewMode").value;
   const select = $("periodSelect");
-  clearChildren(select);
+  const slider = $("yearSlider");
   $("periodLabel").textContent = mode === "window" ? "Fenêtre" : "Année";
 
   if(mode === "window"){
+    clearChildren(select);
     const windows = availableWindows();
     for(const win of windows){
       const option = document.createElement("option");
@@ -556,16 +590,22 @@ function populatePeriods(){
     if(!windows.length){
       $("viewMode").value = "year";
       populatePeriods();
+      return;
     }
+    select.hidden = false;
+    slider.hidden = true;
     return;
   }
 
-  for(const year of availableYears()){
-    const option = document.createElement("option");
-    option.value = year;
-    option.textContent = year;
-    select.appendChild(option);
-  }
+  const years = availableYears();
+  const range = $("yearRange");
+  range.min = "0";
+  range.max = String(Math.max(0, years.length - 1));
+  range.step = "1";
+  if(Number(range.value) > years.length - 1) range.value = "0";
+  updateYearOutput();
+  select.hidden = true;
+  slider.hidden = false;
 }
 
 function updateLegend(){
@@ -623,7 +663,9 @@ function currentPeriod(){
     const win = availableWindows().find((item) => item.id === $("periodSelect").value);
     if(win) return { kind: "window", id: win.id, label: win.label, years: win.years };
   }
-  const year = Number($("periodSelect").value || availableYears()[0]);
+  const years = availableYears();
+  const idx = Math.min(Number($("yearRange").value) || 0, years.length - 1);
+  const year = Number(years[idx] || years[0]);
   return { kind: "year", id: String(year), label: String(year), years: [year] };
 }
 
@@ -958,6 +1000,10 @@ $("viewMode").addEventListener("change", () => {
   renderSelection();
 });
 $("periodSelect").addEventListener("change", renderSelection);
+$("yearRange").addEventListener("input", () => {
+  updateYearOutput();
+  renderSelection();
+});
 initSearch();
 initPwa();
 initData().catch((err) => {
