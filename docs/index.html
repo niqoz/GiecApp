@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Climat Commune — tasmax CMIP6</title>
+<title>Climat Commune — tasmax SSP5-8.5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -364,7 +364,7 @@
       <div class="mark">°C</div>
       <div>
         <h1>Climat Commune — tasmax CMIP6</h1>
-        <p class="subtitle">Maximum journalier de température maximale, par mois et par scénario.</p>
+        <p class="subtitle">Maximum journalier de température maximale — scénario sans action climatique (SSP5-8.5).</p>
       </div>
     </div>
     <form class="search" id="searchForm">
@@ -449,9 +449,7 @@
 <script>
 const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
 const SCENARIOS = {
-  ssp126: { label: "SSP1-2.6", color: "#3f88c5" },
-  ssp245: { label: "SSP2-4.5", color: "#e07a35" },
-  ssp585: { label: "SSP5-8.5", color: "#c5406d" }
+  ssp585: { label: "SSP5-8.5 — sans action climatique", color: "#c5406d" }
 };
 const CLIMATE_WINDOWS = [
   { id: "2030-2050", label: "2030-2050", start: 2030, end: 2050 },
