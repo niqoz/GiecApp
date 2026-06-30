@@ -571,7 +571,7 @@ function populatePeriods(){
 function updateLegend(){
   const legend = $("legend");
   clearChildren(legend);
-  const scenarios = climate?.meta?.scenarios || Object.keys(SCENARIOS);
+  const scenarios = (climate?.meta?.scenarios || Object.keys(SCENARIOS)).filter((s) => SCENARIOS[s]);
   for(const scenario of scenarios){
     const item = document.createElement("span");
     const swatch = document.createElement("i");
@@ -632,7 +632,7 @@ function scenarioValues(period){
   if(period.kind === "year") return selected.point.values?.[String(period.years[0])] || {};
 
   const result = {};
-  const scenarios = climate?.meta?.scenarios || Object.keys(SCENARIOS);
+  const scenarios = (climate?.meta?.scenarios || Object.keys(SCENARIOS)).filter((s) => SCENARIOS[s]);
   for(const scenario of scenarios){
     const monthly = Array.from({ length: 12 }, () => []);
     for(const year of period.years){
@@ -668,7 +668,7 @@ function renderChart(){
     return;
   }
   const valuesByScenario = scenarioValues(period);
-  const scenarios = (climate.meta.scenarios || Object.keys(SCENARIOS)).filter((s) => Array.isArray(valuesByScenario[s]));
+  const scenarios = (climate.meta.scenarios || Object.keys(SCENARIOS)).filter((s) => SCENARIOS[s] && Array.isArray(valuesByScenario[s]));
   if(!scenarios.length){
     renderEmptyChart("Pas de données pour cette période.");
     return;
