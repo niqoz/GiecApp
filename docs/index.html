@@ -716,11 +716,8 @@ function renderChart(){
     return;
   }
 
-  const allValues = scenarios.flatMap((scenario) => valuesByScenario[scenario]);
-  const minValue = Math.min(...allValues, 0);
-  const maxValue = Math.max(...allValues, 1);
-  const yMin = minValue < 0 ? Math.floor((minValue - 2) / 5) * 5 : 0;
-  const yMax = Math.ceil((maxValue + 2) / 5) * 5;
+  const yMin = 0;
+  const yMax = 50;
   const left = 48;
   const right = 18;
   const top = 24;
@@ -730,7 +727,7 @@ function renderChart(){
   const yScale = (value) => top + (yMax - value) / (yMax - yMin) * height;
   const xScale = (month) => left + month * width / 12;
   const baseline = yScale(0);
-  const yStep = Math.max(5, Math.ceil((yMax - yMin) / 5 / 5) * 5);
+  const yStep = 10;
 
   for(let y = yMin; y <= yMax + 0.001; y += yStep){
     const py = yScale(y);
